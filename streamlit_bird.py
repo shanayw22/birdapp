@@ -83,6 +83,10 @@ def audio_to_spectrogram(audio_data):
 # Function to process and predict using the model
 def process_and_predict(audio_data):
     spectrogram_buf = audio_to_spectrogram(audio_data)
+    
+    if spectrogram_buf is None:
+        raise ValueError("Spectrogram could not be generated from the audio data")
+    
     spectrogram_path = "./temp_spectrogram.png"
     with open(spectrogram_path, "wb") as f:
         f.write(spectrogram_buf.getvalue())
@@ -118,6 +122,10 @@ if uploaded_audio is not None:
         st.audio(temp_filename, format='audio/wav')
         
         audio_data, sr = librosa.load(temp_filename, sr=None)
+
+        if audio_data is None or len(audio_data) == 0:
+            raise ValueError("Uploaded audio file could not be read properly")
+
         predicted_class_name, confidence = process_and_predict(audio_data)
         
         # Display the results
@@ -144,17 +152,21 @@ else:
 
         # Process and classify the audio
         audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
-        predicted_class_name, confidence = process_and_predict(audio_data)
+        
+        if audio_data is None or len(audio_data) == 0:
+            st.error("Error: Audio data is empty or invalid.")
+        else:
+            predicted_class_name, confidence = process_and_predict(audio_data)
 
-        # Display the results
-        st.markdown(f"### Prediction Result")
-        st.markdown(f"#### Bird Species: **{predicted_class_name}**")
-        st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+            # Display the results
+            st.markdown(f"### Prediction Result")
+            st.markdown(f"#### Bird Species: **{predicted_class_name}**")
+            st.markdown(f"#### Confidence: **{confidence:.2f}%**")
 
-        # Provide download link for the audio file
-        def get_audio_download_link(audio_data, filename="recording.wav"):
-            b64 = base64.b64encode(audio_data).decode()
-            href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
-            return href
+            # Provide download link for the audio file
+            def get_audio_download_link(audio_data, filename="recording.wav"):
+                b64 = base64.b64encode(audio_data).decode()
+                href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
+                return href
 
-        st.markdown(get_audio_download_link(wav_audio_data))
+            st.markdown(get_audio_download_link(wav_audio_data))
