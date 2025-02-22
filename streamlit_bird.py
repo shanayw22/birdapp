@@ -19,6 +19,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 st.set_page_config(page_title="Bird Species Classifier", layout="wide")
 
+asyncio.set_event_loop(asyncio.new_event_loop())
+
 # Download the model.zip file from Google Drive
 def download_model_from_drive():
     file_id = '1C_1VBe1KC_oQqbfgYog1-elQNd6zIrSv'  # Google Drive file ID
@@ -114,11 +116,14 @@ st.subheader("Record a Bird Call")
 
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
-        self.audio_data = []
-
+        # Initialize the list to store audio data frames
+        if "audio_data" not in st.session_state:
+            st.session_state.audio_data = []  # Create the session state variable if it doesn't exist
+    
     def recv(self, frame):
+        # Extract audio data from the frame and append it to session state
         audio_data = frame.transformed  # Get audio data from WebRTC frame
-        self.audio_data.append(audio_data)
+        st.session_state.audio_data.append(audio_data)  # Store in session state
         return frame
 
 # Streamlit WebRTC setup for real-time audio recording
@@ -132,9 +137,16 @@ webrtc_streamer(
 
 # Process the recorded audio and classify it when user finishes recording
 if 'audio_data' in st.session_state and len(st.session_state.audio_data) > 0:
+    # Concatenate audio data arrays along the appropriate axis (axis=0 for time-based audio)
     audio_bytes = np.concatenate(st.session_state.audio_data, axis=0)
+    
+    # Assuming 'process_and_predict' is a function that takes audio bytes and outputs prediction
     predicted_class_name, confidence = process_and_predict(audio_bytes)
     
+    # Show the prediction result
     st.markdown(f"### Recorded Audio Prediction Result")
     st.markdown(f"#### Bird Species: **{predicted_class_name}**")
     st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+
+    # Optionally, clear the stored audio data after prediction
+    st.session_state.audio_data = []  # Clear the audio data for next recording
