@@ -122,15 +122,6 @@ if audio_file is not None:
 # Handle audio recording
 st.subheader("Record a Bird Call")
 
-# Streamlit WebRTC setup for real-time audio recording
-webrtc_streamer(
-    key="bird-recording",
-    mode=WebRtcMode.SENDRECV,
-    audio_processor_factory=AudioProcessorBase,
-    media_stream_constraints={"audio": True},
-    async_processing=True
-)
-
 # Check if audio was recorded using the st_audiorec component
 wav_audio_data = st_audiorec()
 
