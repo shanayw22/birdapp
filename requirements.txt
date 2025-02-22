@@ -4,8 +4,5 @@ librosa
 matplotlib
 tensorflow
 gdown
-<<<<<<< HEAD
 streamlit-webrtc
-=======
-streamlit-webrtc
->>>>>>> bb39306 (app ready for deployment)
+
