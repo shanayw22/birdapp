@@ -15,14 +15,6 @@ import pydub
 from pydub import AudioSegment
 import tempfile
 
-# Ensure compatibility with Streamlit's async handling
-import asyncio
-if not hasattr(asyncio, "windows_events"):
-    try:
-        asyncio.set_event_loop(asyncio.new_event_loop())  # Set a new event loop
-    except RuntimeError:
-        pass  # Avoid crashing if event loop is already running
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 st.set_page_config(page_title="Bird Species Classifier", layout="wide")
