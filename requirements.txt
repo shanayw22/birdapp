@@ -4,5 +4,4 @@ librosa
 matplotlib
 tensorflow
 gdown
-streamlit-webrtc
-
+st_audiorec
