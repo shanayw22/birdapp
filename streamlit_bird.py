@@ -1,4 +1,5 @@
 import streamlit as st
+from st_audiorec import st_audiorec
 import numpy as np
 import librosa
 import librosa.display
@@ -6,12 +7,11 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.models import load_model
 import zipfile
-import io
-import gdown
 import os
-from io import BytesIO
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+import base64
 import tempfile
+import gdown
+from io import BytesIO
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -88,61 +88,30 @@ def process_and_predict(audio_data):
     
     return predicted_class_name, confidence
 
-
+# Audio recording and playback
 st.title("🎶 Bird Species Classifier from Audio 🎶")
-st.markdown("Classify bird species from your audio recordings or uploaded files.")
+st.markdown("Record bird calls directly in your browser!")
 
-# Option to upload audio
-audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
+# Allow the user to record audio
+wav_audio_data = st_audiorec()
 
-if audio_file is not None:
-    temp_audio_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-    with open(temp_audio_path.name, "wb") as f:
-        f.write(audio_file.getbuffer())
-    
-    audio_data, sr = librosa.load(temp_audio_path.name, sr=None)
+if wav_audio_data is not None:
+    # Show the audio player for playback
+    st.audio(wav_audio_data, format='audio/wav')
+
+    # Process and classify the audio
+    audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
     predicted_class_name, confidence = process_and_predict(audio_data)
-    
+
+    # Display the results
     st.markdown(f"### Prediction Result")
     st.markdown(f"#### Bird Species: **{predicted_class_name}**")
     st.markdown(f"#### Confidence: **{confidence:.2f}%**")
 
-# Allow the user to record audio directly
-st.subheader("Record a Bird Call")
+    # Provide download link for the audio file
+    def get_audio_download_link(audio_data, filename="recording.wav"):
+        b64 = base64.b64encode(audio_data).decode()
+        href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
+        return href
 
-class AudioProcessor(AudioProcessorBase):
-    def __init__(self):
-        # Initialize the list to store audio data frames
-        if "audio_data" not in st.session_state:
-            st.session_state.audio_data = []  # Create the session state variable if it doesn't exist
-    
-    def recv(self, frame):
-        # Extract audio data from the frame and append it to session state
-        audio_data = frame.transformed  # Get audio data from WebRTC frame
-        st.session_state.audio_data.append(audio_data)  # Store in session state
-        return frame
-
-# Streamlit WebRTC setup for real-time audio recording
-webrtc_streamer(
-    key="bird-recording",
-    mode=WebRtcMode.SENDRECV,
-    audio_processor_factory=AudioProcessor,
-    media_stream_constraints={"audio": True},
-    async_processing=False
-)
-
-# Process the recorded audio and classify it when user finishes recording
-if 'audio_data' in st.session_state and len(st.session_state.audio_data) > 0:
-    # Concatenate audio data arrays along the appropriate axis (axis=0 for time-based audio)
-    audio_bytes = np.concatenate(st.session_state.audio_data, axis=0)
-    
-    # Assuming 'process_and_predict' is a function that takes audio bytes and outputs prediction
-    predicted_class_name, confidence = process_and_predict(audio_bytes)
-    
-    # Show the prediction result
-    st.markdown(f"### Recorded Audio Prediction Result")
-    st.markdown(f"#### Bird Species: **{predicted_class_name}**")
-    st.markdown(f"#### Confidence: **{confidence:.2f}%**")
-
-    # Optionally, clear the stored audio data after prediction
-    st.session_state.audio_data = []  # Clear the audio data for next recording
+    st.markdown(get_audio_download_link(wav_audio_data))
