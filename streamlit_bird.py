@@ -128,7 +128,7 @@ webrtc_streamer(
     mode=WebRtcMode.SENDRECV,
     audio_processor_factory=AudioProcessor,
     media_stream_constraints={"audio": True},
-    async_processing=True
+    async_processing=False
 )
 
 # Process the recorded audio and classify it when user finishes recording
