@@ -83,9 +83,21 @@ def audio_to_spectrogram(audio_data):
 # Function to process and predict using the model
 def process_and_predict(audio_data):
     spectrogram_buf = audio_to_spectrogram(audio_data)
+    
+    # Check if the buffer is valid before proceeding
+    if spectrogram_buf is None:
+        st.error("Failed to generate spectrogram. Please check the audio file.")
+        return None, None
+
     spectrogram_path = "./temp_spectrogram.png"
-    with open(spectrogram_path, "wb") as f:
-        f.write(spectrogram_buf.getvalue())
+    
+    # Ensure that the buffer contains data before writing to the file
+    try:
+        with open(spectrogram_path, "wb") as f:
+            f.write(spectrogram_buf.getvalue())
+    except Exception as e:
+        st.error(f"Error saving spectrogram: {e}")
+        return None, None
 
     image = load_img(spectrogram_path, color_mode="grayscale", target_size=(224, 224))
     image = img_to_array(image) / 255.0  
