@@ -51,28 +51,34 @@ model_filename = 'best_resnet50.h5'
 model = load_model_from_zip(zip_filename, model_filename)
 
 # Convert audio to spectrogram
-def audio_to_spectrogram(audio_data, sr=22050):
-    y = np.array(audio_data)
-    
-    # Ensure the audio data is finite
-    if not np.all(np.isfinite(y)):
-        y = np.nan_to_num(y)
+def audio_to_spectrogram(audio_data):
+    try:
+        # Load the audio using librosa
+        y, sr = librosa.load(audio_data, sr=None)
 
-    # Create a spectrogram
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    img = librosa.display.specshow(D, x_axis='time', y_axis='log', sr=sr, ax=ax)
-    ax.set_title('Spectrogram')
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Frequency')
-    plt.colorbar(img, ax=ax, format='%+2.0f dB')
-    
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(fig)
-    return buf
+        # Ensure that the audio data is not empty
+        if y.size == 0:
+            raise ValueError("Audio data is empty")
+
+        # Compute the Short-Time Fourier Transform (STFT)
+        D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
+
+        # Create a plot for the spectrogram
+        fig, ax = plt.subplots(figsize=(10, 6))
+        img = librosa.display.specshow(D, x_axis='time', y_axis='log', sr=sr, ax=ax)
+        ax.set_title('Spectrogram')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Frequency')
+        
+        # Save the figure to a buffer
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png')
+        buf.seek(0)  # Go to the start of the buffer
+        
+        return buf
+    except Exception as e:
+        print(f"Error in audio_to_spectrogram: {e}")
+        return None
 
 # Function to process and predict using the model
 def process_and_predict(audio_data):
