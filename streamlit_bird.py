@@ -66,52 +66,54 @@ def audio_to_spectrogram(audio_data, sr=22050):
     plt.close(fig)
     return buf
 
-def process_and_predict(audio_data):
-    spectrogram_buf = audio_to_spectrogram(audio_data)
+def process_and_predict_from_recording(wav_audio_data):
+    # Convert wav audio data to numpy array
+    audio_data = np.frombuffer(wav_audio_data, dtype=np.int16)  # Change to np.int16 if the buffer is in int16 format
 
-    spectrogram_path = "./temp_spectrogram.png"
-    with open(spectrogram_path, "wb") as f:
-        f.write(spectrogram_buf.getvalue())
+    # Ensure audio data is in the correct range for librosa (between -1 and 1)
+    audio_data = audio_data / np.max(np.abs(audio_data))
 
-    image = load_img(spectrogram_path, color_mode="grayscale", target_size=(224, 224))
-    image = img_to_array(image) / 255.0  
-    image = np.repeat(image, 3, axis=-1)  
+    # Now call the existing function for spectrogram and prediction
+    return process_and_predict(audio_data)
 
-    image = np.expand_dims(image, axis=0)
-
-    prediction = model.predict(image)
-
-    predicted_class_index = np.argmax(prediction)
-    predicted_class_name = class_names[predicted_class_index]
-    confidence = np.max(prediction) * 100  
-
-    return predicted_class_name, confidence
-
-st.title("🎶 Bird Species Classifier from Audio 🎶")
-st.markdown("Record bird calls directly in your browser or upload a .wav file!")
-
-# Option to upload an audio file
+# Handle file upload
 audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
 
 if audio_file is not None:
+    # Save the uploaded audio file temporarily
     temp_audio_path = "./temp_audio.wav"
     with open(temp_audio_path, "wb") as f:
         f.write(audio_file.getbuffer())
+
+    # Read the audio file for prediction
     audio_data, sr = librosa.load(temp_audio_path, sr=None)
     predicted_class_name, confidence = process_and_predict(audio_data)
 
+    # Show the prediction result with confidence
     st.markdown(f"### Prediction Result")
     st.markdown(f"#### Bird Species: **{predicted_class_name}**")
     st.markdown(f"#### Confidence: **{confidence:.2f}%**")
 
-# Allow the user to record audio directly
+# Handle audio recording
+st.subheader("Record a Bird Call")
+
+# Streamlit WebRTC setup for real-time audio recording
+webrtc_streamer(
+    key="bird-recording",
+    mode=WebRtcMode.SENDRECV,
+    audio_processor_factory=AudioProcessorBase,
+    media_stream_constraints={"audio": True},
+    async_processing=True
+)
+
+# Check if audio was recorded using the st_audiorec component
 wav_audio_data = st_audiorec()
 
 if wav_audio_data is not None:
     st.audio(wav_audio_data, format='audio/wav')
 
-    audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
-    predicted_class_name, confidence = process_and_predict(audio_data)
+    # Process recorded audio and predict
+    predicted_class_name, confidence = process_and_predict_from_recording(wav_audio_data)
 
     st.markdown(f"### Prediction Result")
     st.markdown(f"#### Bird Species: **{predicted_class_name}**")
