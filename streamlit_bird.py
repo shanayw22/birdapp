@@ -103,3 +103,16 @@ if audio_file is not None:
     st.markdown(f"### Prediction Result")
     st.markdown(f"#### Bird Species: **{predicted_class_name}**")
     st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+
+# Allow the user to record audio directly
+wav_audio_data = st_audiorec()
+
+if wav_audio_data is not None:
+    st.audio(wav_audio_data, format='audio/wav')
+
+    audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
+    predicted_class_name, confidence = process_and_predict(audio_data)
+
+    st.markdown(f"### Prediction Result")
+    st.markdown(f"#### Bird Species: **{predicted_class_name}**")
+    st.markdown(f"#### Confidence: **{confidence:.2f}%**")
