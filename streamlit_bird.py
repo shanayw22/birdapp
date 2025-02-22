@@ -13,7 +13,7 @@ import gdown
 import os
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 st.set_page_config(page_title="Bird Species Classifier", layout="wide")
 
@@ -93,7 +93,6 @@ st.markdown("Record bird calls directly in your browser or upload a .wav file!")
 # Option to upload an audio file
 audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
 
-
 def process_and_predict_from_recording(wav_audio_data):
     # Convert wav audio data to numpy array
     audio_data = np.frombuffer(wav_audio_data, dtype=np.int16)  # Change to np.int16 if the buffer is in int16 format
@@ -104,9 +103,7 @@ def process_and_predict_from_recording(wav_audio_data):
     # Now call the existing function for spectrogram and prediction
     return process_and_predict(audio_data)
 
-# Handle file upload
-audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
-
+# Handle file upload (audio file)
 if audio_file is not None:
     # Save the uploaded audio file temporarily
     temp_audio_path = "./temp_audio.wav"
