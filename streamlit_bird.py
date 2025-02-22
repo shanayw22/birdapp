@@ -11,6 +11,7 @@ from io import BytesIO
 import gdown
 import os
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 st.set_page_config(page_title="Bird Species Classifier", layout="wide")
 
