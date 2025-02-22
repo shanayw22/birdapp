@@ -65,6 +65,34 @@ def audio_to_spectrogram(audio_data, sr=22050):
     buf.seek(0)
     plt.close(fig)
     return buf
+    
+def process_and_predict(audio_data):
+    spectrogram_buf = audio_to_spectrogram(audio_data)
+
+    spectrogram_path = "./temp_spectrogram.png"
+    with open(spectrogram_path, "wb") as f:
+        f.write(spectrogram_buf.getvalue())
+
+    image = load_img(spectrogram_path, color_mode="grayscale", target_size=(224, 224))
+    image = img_to_array(image) / 255.0  
+    image = np.repeat(image, 3, axis=-1)  
+
+    image = np.expand_dims(image, axis=0)
+
+    prediction = model.predict(image)
+
+    predicted_class_index = np.argmax(prediction)
+    predicted_class_name = class_names[predicted_class_index]
+    confidence = np.max(prediction) * 100  
+
+    return predicted_class_name, confidence
+
+st.title("🎶 Bird Species Classifier from Audio 🎶")
+st.markdown("Record bird calls directly in your browser or upload a .wav file!")
+
+# Option to upload an audio file
+audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
+
 
 def process_and_predict_from_recording(wav_audio_data):
     # Convert wav audio data to numpy array
