@@ -1,8 +1,7 @@
 streamlit
-streamlit-webrtc
+streamlit-audiorec
 tensorflow
 librosa
-gdown
-pydub
-numpy
 matplotlib
+gdown
+numpy
