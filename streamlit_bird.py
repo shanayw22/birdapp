@@ -71,7 +71,7 @@ def audio_to_spectrogram(audio_data):
         ax.set_ylabel('Frequency')
         
         # Save the figure to a buffer
-        buf = io.BytesIO()
+        buf = BytesIO()
         fig.savefig(buf, format='png')
         buf.seek(0)  # Go to the start of the buffer
         
@@ -81,12 +81,8 @@ def audio_to_spectrogram(audio_data):
         return None
 
 # Function to process and predict using the model
-# Function to process and predict using the model
 def process_and_predict(audio_data):
     spectrogram_buf = audio_to_spectrogram(audio_data)
-    if spectrogram_buf is None:
-        return "Error", 0  # Return a fallback result
-    
     spectrogram_path = "./temp_spectrogram.png"
     with open(spectrogram_path, "wb") as f:
         f.write(spectrogram_buf.getvalue())
@@ -96,18 +92,11 @@ def process_and_predict(audio_data):
     image = np.repeat(image, 3, axis=-1)  # Convert to RGB
     image = np.expand_dims(image, axis=0)
     
-    # Make prediction
     prediction = model.predict(image)
-    
-    if prediction is None or prediction.shape != (1, len(class_names)):
-        return "Prediction Error", 0  # Ensure the prediction shape is valid
     
     predicted_class_index = np.argmax(prediction)
     predicted_class_name = class_names[predicted_class_index]
-    confidence = np.max(prediction) * 100  # Ensure confidence is a valid number
-    
-    if confidence is None:
-        confidence = 0  # Default to 0% if confidence is None
+    confidence = np.max(prediction) * 100  
     
     return predicted_class_name, confidence
 
@@ -119,24 +108,58 @@ st.markdown("Record bird calls directly in your browser or upload a .wav file!")
 uploaded_audio = st.file_uploader("Upload a .wav file", type=["wav"])
 
 if uploaded_audio is not None:
-    # Load the uploaded .wav file and process it
-    st.audio(uploaded_audio, format='audio/wav')
-    
-    audio_data, sr = librosa.load(uploaded_audio, sr=None)
-    predicted_class_name, confidence = process_and_predict(audio_data)
-    
-    # Display the results
-    st.markdown(f"### Prediction Result")
-    st.markdown(f"#### Bird Species: **{predicted_class_name}**")
-    st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+    # Save the uploaded file temporarily to avoid errors
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+        temp_file.write(uploaded_audio.getvalue())
+        temp_filename = temp_file.name
 
-    # Provide download link for the audio file
-    def get_audio_download_link(audio_data, filename="recording.wav"):
-        b64 = base64.b64encode(audio_data).decode()
-        href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
-        return href
+    try:
+        # Load the uploaded .wav file and process it
+        st.audio(temp_filename, format='audio/wav')
+        
+        audio_data, sr = librosa.load(temp_filename, sr=None)
+        predicted_class_name, confidence = process_and_predict(audio_data)
+        
+        # Display the results
+        st.markdown(f"### Prediction Result")
+        st.markdown(f"#### Bird Species: **{predicted_class_name}**")
+        st.markdown(f"#### Confidence: **{confidence:.2f}%**")
 
-    st.markdown(get_audio_download_link(uploaded_audio.getvalue()))
+        # Provide download link for the audio file
+        def get_audio_download_link(audio_data, filename="recording.wav"):
+            b64 = base64.b64encode(audio_data).decode()
+            href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
+            return href
+
+        st.markdown(get_audio_download_link(uploaded_audio.getvalue()))
+    except Exception as e:
+        st.error(f"Error processing the audio file: {e}")
+else:
+    # Allow the user to record audio
+    wav_audio_data = st_audiorec()
+
+    if wav_audio_data is not None:
+        # Show the audio player for playback
+        st.audio(wav_audio_data, format='audio/wav')
+
+        # Process and classify the audio
+        audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
+        predicted_class_name, confidence = process_and_predict(audio_data)
+
+        # Display the results
+        st.markdown(f"### Prediction Result")
+        st.markdown(f"#### Bird Species: **{predicted_class_name}**")
+        st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+
+        # Provide download link for the audio file
+        def get_audio_download_link(audio_data, filename="recording.wav"):
+            b64 = base64.b64encode(audio_data).decode()
+            href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
+            return href
+
+        st.markdown(get_audio_download_link(uploaded_audio.getvalue()))
+    except Exception as e:
+        st.error(f"Error processing the audio file: {e}")
 else:
     # Allow the user to record audio
     wav_audio_data = st_audiorec()
