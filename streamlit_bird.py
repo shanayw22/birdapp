@@ -11,15 +11,11 @@ import gdown
 import os
 from io import BytesIO
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
-import pydub
-from pydub import AudioSegment
 import tempfile
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 st.set_page_config(page_title="Bird Species Classifier", layout="wide")
-
-asyncio.set_event_loop(asyncio.new_event_loop())
 
 # Download the model.zip file from Google Drive
 def download_model_from_drive():
@@ -100,11 +96,11 @@ st.markdown("Classify bird species from your audio recordings or uploaded files.
 audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
 
 if audio_file is not None:
-    temp_audio_path = "./temp_audio.wav"
-    with open(temp_audio_path, "wb") as f:
+    temp_audio_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+    with open(temp_audio_path.name, "wb") as f:
         f.write(audio_file.getbuffer())
     
-    audio_data, sr = librosa.load(temp_audio_path, sr=None)
+    audio_data, sr = librosa.load(temp_audio_path.name, sr=None)
     predicted_class_name, confidence = process_and_predict(audio_data)
     
     st.markdown(f"### Prediction Result")
