@@ -1,3 +1,4 @@
+import streamlit as st
 from st_audiorec import st_audiorec
 import numpy as np
 import librosa
@@ -11,7 +12,6 @@ from io import BytesIO
 import gdown
 import os
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
-import streamlit as st
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
@@ -90,12 +90,14 @@ def process_and_predict(audio_data):
 st.title("🎶 Bird Species Classifier from Audio 🎶")
 st.markdown("Record bird calls directly in your browser or upload a .wav file!")
 
-wav_audio_data = st_audiorec()
+# Option to upload an audio file
+audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
 
-if wav_audio_data is not None:
-    st.audio(wav_audio_data, format='audio/wav')
-
-    audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
+if audio_file is not None:
+    temp_audio_path = "./temp_audio.wav"
+    with open(temp_audio_path, "wb") as f:
+        f.write(audio_file.getbuffer())
+    audio_data, sr = librosa.load(temp_audio_path, sr=None)
     predicted_class_name, confidence = process_and_predict(audio_data)
 
     st.markdown(f"### Prediction Result")
