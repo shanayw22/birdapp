@@ -157,30 +157,4 @@ else:
             href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
             return href
 
-        st.markdown(get_audio_download_link(uploaded_audio.getvalue()))
-    except Exception as e:
-        st.error(f"Error processing the audio file: {e}")
-else:
-    # Allow the user to record audio
-    wav_audio_data = st_audiorec()
-
-    if wav_audio_data is not None:
-        # Show the audio player for playback
-        st.audio(wav_audio_data, format='audio/wav')
-
-        # Process and classify the audio
-        audio_data = np.frombuffer(wav_audio_data, dtype=np.float32)
-        predicted_class_name, confidence = process_and_predict(audio_data)
-
-        # Display the results
-        st.markdown(f"### Prediction Result")
-        st.markdown(f"#### Bird Species: **{predicted_class_name}**")
-        st.markdown(f"#### Confidence: **{confidence:.2f}%**")
-
-        # Provide download link for the audio file
-        def get_audio_download_link(audio_data, filename="recording.wav"):
-            b64 = base64.b64encode(audio_data).decode()
-            href = f'<a href="data:audio/wav;base64,{b64}" download="{filename}">Download the recording</a>'
-            return href
-
         st.markdown(get_audio_download_link(wav_audio_data))
