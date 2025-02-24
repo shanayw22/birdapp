@@ -19,7 +19,7 @@ st.set_page_config(page_title="Bird Species Classifier", layout="wide")
 
 # Download the model.zip file from Google Drive
 def download_model_from_drive():
-    file_id = '1C_1VBe1KC_oQqbfgYog1-elQNd6zIrSv'
+    file_id = '1uQ66PLifiZUboGR9KMjAlf7TAOJOKSdy'
     download_url = f'https://drive.google.com/uc?id={file_id}'
     output = 'model.zip'
     gdown.download(download_url, output, quiet=False)
