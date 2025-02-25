@@ -5,3 +5,4 @@ librosa
 matplotlib
 gdown
 numpy
+streamlit_webrtc
