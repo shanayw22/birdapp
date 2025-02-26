@@ -29,13 +29,6 @@ if not os.path.exists(model_dir):
 # Define your model path
 model_path = os.path.join(model_dir, 'image_model.h5')
 
-# Download the model if it doesn't already exist
-if not os.path.exists(model_path):
-    st.write("Downloading image model...")
-    file_id = '15IRvAg31XQAhn45bUsDXCQRDttIqjSt9'
-    download_url = f'https://drive.google.com/uc?id={file_id}'
-    gdown.download(download_url, model_path, quiet=False)
-    st.write("Image model downloaded successfully!")
 
 # Now load the model
 model = load_model(model_path)
@@ -45,7 +38,7 @@ tab = st.radio("Select the functionality", ("Classify Bird Species from Images",
 # Function for loading the image model
 @st.cache_resource
 def load_image_model():
-    model_path = os.path.join(model_directory, model_filename_image)
+    model_path = os.path.join(model_dir, model_filename_image)
     if not os.path.exists(model_path):
         st.write("Downloading image model...")
         file_id = '15IRvAg31XQAhn45bUsDXCQRDttIqjSt9'
