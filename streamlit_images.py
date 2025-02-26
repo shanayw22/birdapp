@@ -68,7 +68,7 @@ def load_audio_model():
 
 # Image Classification Tab
 if tab == "Classify Bird Species from Images":
-    st.title("🎶 Bird Species Image Classifier")
+    st.title("Bird Species Image Classifier")
     st.markdown("Upload a bird image and get it classified!")
 
     model_image = load_image_model()
