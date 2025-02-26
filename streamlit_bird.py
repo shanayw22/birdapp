@@ -1,5 +1,5 @@
+import pandas as pd
 import streamlit as st
-from st_audiorec import st_audiorec
 import numpy as np
 import librosa
 import librosa.display
@@ -8,129 +8,155 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.models import load_model
 import zipfile
 import io
-from io import BytesIO
 import gdown
 import os
+from io import BytesIO
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+from st_audiorec import st_audiorec
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# Set page configuration
 st.set_page_config(page_title="Bird Species Classifier", layout="wide")
 
-# Download the model.zip file from Google Drive
-def download_model_from_drive():
-    file_id = '1uQ66PLifiZUboGR9KMjAlf7TAOJOKSdy'
-    download_url = f'https://drive.google.com/uc?id={file_id}'
-    output = 'model.zip'
-    gdown.download(download_url, output, quiet=False)
+# Model file paths
+model_filename_image = 'bird_resnet_model.h5'
+model_filename_audio = 'best_resnet50.h5'
+model_directory = './models'
 
-# Extract the model from the zip file
-def extract_model(zip_filename, model_filename):
-    if not os.path.exists(model_filename):  
-        with zipfile.ZipFile(zip_filename, 'r') as zipf:
-            zipf.extract(model_filename, './')
+# Tab options
+tab = st.radio("Select the functionality", ("Classify Bird Species from Images", "Classify Bird Species from Audio"))
 
-# Load the model from the extracted file
-def load_model_from_file(model_filename):
-    model = load_model(model_filename)
-    return model
-
+# Function for loading the image model
 @st.cache_resource
-def load_model_from_zip(zip_filename, model_filename):
-    if not os.path.exists(model_filename):
-        download_model_from_drive()
-        extract_model(zip_filename, model_filename)
+def load_image_model():
+    model_path = os.path.join(model_directory, model_filename_image)
+    if not os.path.exists(model_path):
+        st.write("Downloading image model...")
+        file_id = '15IRvAg31XQAhn45bUsDXCQRDttIqjSt9'
+        download_url = f'https://drive.google.com/uc?id={file_id}'
+        gdown.download(download_url, model_path, quiet=False)
+        st.write("Image model downloaded successfully!")
 
-    model = load_model_from_file(model_filename)
+    model = load_model(model_path)
     return model
 
-class_names = ["American Robin", "Bewick's Wren", "Northern Cardinal", "Northern Mockingbird", "Song Sparrow"]
-zip_filename = 'model.zip'
-model_filename = 'best_resnet50.h5'
-model = load_model_from_zip(zip_filename, model_filename)
+# Function for loading the audio model
+@st.cache_resource
+def load_audio_model():
+    zip_filename = 'model.zip'
+    if not os.path.exists(zip_filename):
+        st.write("Downloading audio model...")
+        file_id = '1uQ66PLifiZUboGR9KMjAlf7TAOJOKSdy'
+        download_url = f'https://drive.google.com/uc?id={file_id}'
+        gdown.download(download_url, zip_filename, quiet=False)
 
-def audio_to_spectrogram(audio_data, sr=22050):
-    y = np.array(audio_data)
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)  
+    if not os.path.exists(model_filename_audio):
+        with zipfile.ZipFile(zip_filename, 'r') as zipf:
+            zipf.extract(model_filename_audio, './')
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    img = librosa.display.specshow(D, x_axis='time', y_axis='log', sr=sr, ax=ax)
-    ax.set_title('Spectrogram')
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Frequency')
-    plt.colorbar(img, ax=ax, format='%+2.0f dB')
+    model = load_model(model_filename_audio)
+    return model
 
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(fig)
-    return buf
-    
-def process_and_predict(audio_data):
-    spectrogram_buf = audio_to_spectrogram(audio_data)
+# Image Classification Tab
+if tab == "Classify Bird Species from Images":
+    st.title("🎶 Bird Species Image Classifier")
+    st.markdown("Upload a bird image and get it classified!")
 
-    spectrogram_path = "./temp_spectrogram.png"
-    with open(spectrogram_path, "wb") as f:
-        f.write(spectrogram_buf.getvalue())
+    model_image = load_image_model()
 
-    image = load_img(spectrogram_path, color_mode="grayscale", target_size=(224, 224))
-    image = img_to_array(image) / 255.0  
-    image = np.repeat(image, 3, axis=-1)  
+    # List of class names (for image classification)
+    class_names_image = ['Black_footed_Albatross', 'Laysan_Albatross', 'Sooty_Albatross', 'Groove_billed_Ani', 
+                         'Crested_Auklet', 'Least_Auklet', 'Parakeet_Auklet', 'Rhinoceros_Auklet', 'Brewer_Blackbird', 
+                         'Red_winged_Blackbird', 'Rusty_Blackbird', 'Yellow_headed_...']  # Truncated for brevity
 
-    image = np.expand_dims(image, axis=0)
+    def preprocess_image(uploaded_image):
+        img = load_img(uploaded_image, target_size=(224, 224)) 
+        img_array = img_to_array(img)
+        img_array = img_array / 255.0 
+        img_array = np.expand_dims(img_array, axis=0)  
+        return img, img_array
 
-    prediction = model.predict(image)
+    def make_prediction(img_array):
+        predictions = model_image.predict(img_array)
+        predicted_class = np.argmax(predictions, axis=-1)
+        return predicted_class[0]
 
-    predicted_class_index = np.argmax(prediction)
-    predicted_class_name = class_names[predicted_class_index]
-    confidence = np.max(prediction) * 100  
+    uploaded_image = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
 
-    return predicted_class_name, confidence
+    if uploaded_image:
+        img, img_array = preprocess_image(uploaded_image)
+        predicted_class = make_prediction(img_array)
+        st.image(img, caption='Uploaded Image.', use_column_width=True)
+        st.write(f'Prediction: {class_names_image[predicted_class]}')
 
-st.title("🎶 Bird Species Classifier from Audio 🎶")
-st.markdown("Record bird calls directly in your browser or upload a .wav file!")
+# Audio Classification Tab
+elif tab == "Classify Bird Species from Audio":
+    st.title("🎶 Bird Species Classifier from Audio 🎶")
+    st.markdown("Record or upload a bird call and get it classified!")
 
-# Option to upload an audio file
-audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
+    model_audio = load_audio_model()
 
-def process_and_predict_from_recording(wav_audio_data):
-    # Convert wav audio data to numpy array
-    audio_data = np.frombuffer(wav_audio_data, dtype=np.int16)  # Change to np.int16 if the buffer is in int16 format
+    class_names_audio = ["American Robin", "Bewick's Wren", "Northern Cardinal", "Northern Mockingbird", "Song Sparrow"]
 
-    # Ensure audio data is in the correct range for librosa (between -1 and 1)
-    audio_data = audio_data / np.max(np.abs(audio_data))
+    def audio_to_spectrogram(audio_data, sr=22050):
+        y = np.array(audio_data)
+        D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)  
 
-    # Now call the existing function for spectrogram and prediction
-    return process_and_predict(audio_data)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        img = librosa.display.specshow(D, x_axis='time', y_axis='log', sr=sr, ax=ax)
+        ax.set_title('Spectrogram')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Frequency')
+        plt.colorbar(img, ax=ax, format='%+2.0f dB')
 
-# Handle file upload (audio file)
-if audio_file is not None:
-    # Save the uploaded audio file temporarily
-    temp_audio_path = "./temp_audio.wav"
-    with open(temp_audio_path, "wb") as f:
-        f.write(audio_file.getbuffer())
+        buf = BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        plt.close(fig)
+        return buf
 
-    # Read the audio file for prediction
-    audio_data, sr = librosa.load(temp_audio_path, sr=None)
-    predicted_class_name, confidence = process_and_predict(audio_data)
+    def process_and_predict(audio_data):
+        spectrogram_buf = audio_to_spectrogram(audio_data)
 
-    # Show the prediction result with confidence
-    st.markdown(f"### Prediction Result")
-    st.markdown(f"#### Bird Species: **{predicted_class_name}**")
-    st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+        spectrogram_path = "./temp_spectrogram.png"
+        with open(spectrogram_path, "wb") as f:
+            f.write(spectrogram_buf.getvalue())
 
-# Handle audio recording
-st.subheader("Record a Bird Call")
+        image = load_img(spectrogram_path, color_mode="grayscale", target_size=(224, 224))
+        image = img_to_array(image) / 255.0  
+        image = np.repeat(image, 3, axis=-1)  
+        image = np.expand_dims(image, axis=0)
 
-# Check if audio was recorded using the st_audiorec component
-wav_audio_data = st_audiorec()
+        prediction = model_audio.predict(image)
 
-if wav_audio_data is not None:
-    st.audio(wav_audio_data, format='audio/wav')
+        predicted_class_index = np.argmax(prediction)
+        predicted_class_name = class_names_audio[predicted_class_index]
+        confidence = np.max(prediction) * 100  
 
-    # Process recorded audio and predict
-    predicted_class_name, confidence = process_and_predict_from_recording(wav_audio_data)
+        return predicted_class_name, confidence
 
-    st.markdown(f"### Prediction Result")
-    st.markdown(f"#### Bird Species: **{predicted_class_name}**")
-    st.markdown(f"#### Confidence: **{confidence:.2f}%**")
+    # Option to upload an audio file
+    audio_file = st.file_uploader("Upload an audio file (WAV)", type=["wav"])
+
+    def process_and_predict_from_recording(wav_audio_data):
+        audio_data = np.frombuffer(wav_audio_data, dtype=np.int16)  
+        audio_data = audio_data / np.max(np.abs(audio_data))  
+        return process_and_predict(audio_data)
+
+    if audio_file:
+        audio_data = audio_file.read()
+        predicted_class_name, confidence = process_and_predict_from_recording(audio_data)
+        st.audio(audio_file, format="audio/wav")
+        st.write(f"Prediction: {predicted_class_name}")
+        st.write(f"Confidence: {confidence:.2f}%")
+
+    # Option to record audio directly
+    st.markdown("Or, record your audio:")
+    audio_data = st_audiorec()
+
+    if audio_data:
+        predicted_class_name, confidence = process_and_predict_from_recording(audio_data)
+        st.audio(audio_data, format="audio/wav")
+        st.write(f"Prediction: {predicted_class_name}")
+        st.write(f"Confidence: {confidence:.2f}%")
