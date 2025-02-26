@@ -22,8 +22,23 @@ st.set_page_config(page_title="Bird Species Classifier", layout="wide")
 # Model file paths
 model_filename_image = 'bird_resnet_model.h5'
 model_filename_audio = 'best_resnet50.h5'
-model_directory = './models'
+model_dir = './models'
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 
+# Define your model path
+model_path = os.path.join(model_dir, 'image_model.h5')
+
+# Download the model if it doesn't already exist
+if not os.path.exists(model_path):
+    st.write("Downloading image model...")
+    file_id = '15IRvAg31XQAhn45bUsDXCQRDttIqjSt9'
+    download_url = f'https://drive.google.com/uc?id={file_id}'
+    gdown.download(download_url, model_path, quiet=False)
+    st.write("Image model downloaded successfully!")
+
+# Now load the model
+model = load_model(model_path)
 # Tab options
 tab = st.radio("Select the functionality", ("Classify Bird Species from Images", "Classify Bird Species from Audio"))
 
